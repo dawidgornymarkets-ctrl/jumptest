@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Jump Up</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #111;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+  #score {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    font-size: 18px;
+  }
+  #gameOver {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: rgba(0,0,0,0.8);
+  }
+  button {
+    padding: 12px 20px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div id="score">0 m</div>
+<div id="gameOver">
+  <h1>Game Over</h1>
+  <button onclick="restart()">Zagraj ponownie</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// PLAYER
+let player = {
+  x: canvas.width / 2,
+  y: canvas.height - 100,
+  r: 15,
+  vy: 0
+};
+
+// GAME
+let gravity = 0.5;
+let jumpForce = -12;
+let platforms = [];
+let score = 0;
+let highestY = player.y;
+let gameRunning = true;
+
+// CREATE PLATFORMS
+function createPlatforms() {
+  platforms = [];
+  for (let i = 0; i < 10; i++) {
+    platforms.push({
+      x: Math.random() * (canvas.width - 80),
+      y: canvas.height - i * 100,
+      w: 80,
+      h: 10
+    });
+  }
+}
+createPlatforms();
+
+// INPUT
+canvas.addEventListener("touchstart", jump);
+canvas.addEventListener("mousedown", jump);
+
+function jump() {
+  if (!gameRunning) return;
+  player.vy = jumpForce;
+}
+
+// LOOP
+function update() {
+  if (!gameRunning) return;
+
+  player.vy += gravity;
+  player.y += player.vy;
+
+  // COLLISIONS
+  platforms.forEach(p => {
+    if (
+      player.vy > 0 &&
+      player.x > p.x &&
+      player.x < p.x + p.w &&
+      player.y + player.r > p.y &&
+      player.y + player.r < p.y + p.h
+    ) {
+      player.vy = jumpForce;
+    }
+  });
+
+  // CAMERA UP
+  if (player.y < canvas.height / 2) {
+    let diff = canvas.height / 2 - player.y;
+    player.y = canvas.height / 2;
+    platforms.forEach(p => p.y += diff);
+    score += Math.floor(diff);
+  }
+
+  // RECYCLE PLATFORMS
+  platforms.forEach(p => {
+    if (p.y > canvas.height) {
+      p.y = -20;
+      p.x = Math.random() * (canvas.width - 80);
+    }
+  });
+
+  // GAME OVER
+  if (player.y > canvas.height) {
+    gameRunning = false;
+    document.getElementById("gameOver").style.display = "flex";
+  }
+
+  document.getElementById("score").innerText = Math.floor(score / 10) + " m";
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // PLAYER
+  ctx.fillStyle = "#4caf50";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // PLATFORMS
+  ctx.fillStyle = "#fff";
+  platforms.forEach(p => {
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+  });
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+function restart() {
+  player.y = canvas.height - 100;
+  player.vy = 0;
+  score = 0;
+  gameRunning = true;
+  document.getElementById("gameOver").style.display = "none";
+  createPlatforms();
+}
+</script>
+
+</body>
+</html>
